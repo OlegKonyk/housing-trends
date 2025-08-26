@@ -1,0 +1,399 @@
+name: AWS Deployment Pipeline
+
+on:
+  push:
+    branches:
+      - main
+      - staging
+  pull_request:
+    branches:
+      - main
+
+env:
+  AWS_REGION: us-east-1
+  ECR_REPOSITORY_API: housing-trends-api
+  ECR_REPOSITORY_WEB: housing-trends-web
+  ECS_CLUSTER: housing-trends-cluster
+  NODE_VERSION: '20'
+
+jobs:
+  # Run tests on all PRs and pushes
+  test:
+    name: Test Suite
+    runs-on: ubuntu-latest
+    
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_USER: test_user
+          POSTGRES_PASSWORD: test_pass
+          POSTGRES_DB: housing_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+      
+      redis:
+        image: redis:7-alpine
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 8
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run linting
+        run: pnpm lint
+
+      - name: Run type checking
+        run: pnpm type-check
+
+      - name: Run unit tests
+        run: pnpm test:unit --coverage
+        env:
+          DATABASE_URL: postgresql://test_user:test_pass@localhost:5432/housing_test
+          REDIS_URL: redis://localhost:6379
+
+      - name: Run integration tests
+        run: pnpm test:integration
+        env:
+          DATABASE_URL: postgresql://test_user:test_pass@localhost:5432/housing_test
+          REDIS_URL: redis://localhost:6379
+
+      - name: Upload coverage reports
+        uses: codecov/codecov-action@v3
+        with:
+          files: ./coverage/lcov.info
+          flags: unittests
+          name: codecov-umbrella
+
+  # Run E2E tests
+  e2e-tests:
+    name: E2E Tests
+    runs-on: ubuntu-latest
+    needs: test
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 8
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Playwright browsers
+        run: pnpm exec playwright install --with-deps chromium firefox webkit
+
+      - name: Build application
+        run: pnpm build
+
+      - name: Run E2E tests
+        run: pnpm test:e2e
+        env:
+          PLAYWRIGHT_BASE_URL: http://localhost:3000
+
+      - name: Upload Playwright report
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 7
+
+  # Security scanning
+  security-scan:
+    name: Security Scanning
+    runs-on: ubuntu-latest
+    needs: test
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run Trivy security scan
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+
+      - name: Upload Trivy results to GitHub Security
+        uses: github/codeql-action/upload-sarif@v2
+        with:
+          sarif_file: 'trivy-results.sarif'
+
+      - name: Run npm audit
+        run: pnpm audit --audit-level=moderate
+
+  # Build and push Docker images
+  build-and-push:
+    name: Build and Push to ECR
+    runs-on: ubuntu-latest
+    needs: [test, e2e-tests, security-scan]
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/staging'
+    
+    outputs:
+      api-image: ${{ steps.build-api.outputs.image }}
+      web-image: ${{ steps.build-web.outputs.image }}
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Set environment name
+        id: env-name
+        run: |
+          if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
+            echo "environment=production" >> $GITHUB_OUTPUT
+          else
+            echo "environment=staging" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Build and push API image
+        id: build-api
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          docker build -f apps/api/Dockerfile -t $ECR_REGISTRY/$ECR_REPOSITORY_API:$IMAGE_TAG .
+          docker tag $ECR_REGISTRY/$ECR_REPOSITORY_API:$IMAGE_TAG $ECR_REGISTRY/$ECR_REPOSITORY_API:latest
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY_API:$IMAGE_TAG
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY_API:latest
+          echo "image=$ECR_REGISTRY/$ECR_REPOSITORY_API:$IMAGE_TAG" >> $GITHUB_OUTPUT
+
+      - name: Build and push Web image
+        id: build-web
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          docker build -f apps/web/Dockerfile -t $ECR_REGISTRY/$ECR_REPOSITORY_WEB:$IMAGE_TAG .
+          docker tag $ECR_REGISTRY/$ECR_REPOSITORY_WEB:$IMAGE_TAG $ECR_REGISTRY/$ECR_REPOSITORY_WEB:latest
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY_WEB:$IMAGE_TAG
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY_WEB:latest
+          echo "image=$ECR_REGISTRY/$ECR_REPOSITORY_WEB:$IMAGE_TAG" >> $GITHUB_OUTPUT
+
+  # Deploy to staging
+  deploy-staging:
+    name: Deploy to Staging
+    runs-on: ubuntu-latest
+    needs: build-and-push
+    if: github.ref == 'refs/heads/staging'
+    environment:
+      name: staging
+      url: https://staging.housing-trends.com
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Deploy API to ECS
+        run: |
+          aws ecs update-service \
+            --cluster ${{ env.ECS_CLUSTER }}-staging \
+            --service housing-api-staging \
+            --force-new-deployment
+
+      - name: Deploy Web to S3/CloudFront
+        run: |
+          aws s3 sync ./apps/web/out s3://housing-trends-staging-web/ --delete
+          aws cloudfront create-invalidation \
+            --distribution-id ${{ secrets.CLOUDFRONT_DISTRIBUTION_ID_STAGING }} \
+            --paths "/*"
+
+      - name: Run smoke tests
+        run: |
+          pnpm test:smoke --env=staging
+        env:
+          STAGING_URL: https://staging.housing-trends.com
+
+  # Deploy to production
+  deploy-production:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    needs: build-and-push
+    if: github.ref == 'refs/heads/main'
+    environment:
+      name: production
+      url: https://housing-trends.com
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Deploy API to ECS (Blue/Green)
+        run: |
+          # Create new task definition revision
+          TASK_DEFINITION=$(aws ecs describe-task-definition \
+            --task-definition housing-api-prod \
+            --query 'taskDefinition' \
+            --output json)
+          
+          NEW_TASK_DEF=$(echo $TASK_DEFINITION | \
+            jq --arg IMAGE "${{ needs.build-and-push.outputs.api-image }}" \
+            '.containerDefinitions[0].image = $IMAGE | del(.taskDefinitionArn, .revision, .status, .requiresAttributes, .compatibilities, .registeredAt, .registeredBy)')
+          
+          aws ecs register-task-definition --cli-input-json "$NEW_TASK_DEF"
+          
+          # Update service with new task definition
+          aws ecs update-service \
+            --cluster ${{ env.ECS_CLUSTER }}-production \
+            --service housing-api-production \
+            --task-definition housing-api-prod
+
+      - name: Deploy Web to S3/CloudFront
+        run: |
+          # Build production assets
+          pnpm build:production
+          
+          # Sync to S3 with cache headers
+          aws s3 sync ./apps/web/.next/static s3://housing-trends-production-web/_next/static \
+            --cache-control "public, max-age=31536000, immutable"
+          
+          aws s3 sync ./apps/web/out s3://housing-trends-production-web/ \
+            --exclude "_next/static/*" \
+            --cache-control "public, max-age=0, must-revalidate"
+          
+          # Invalidate CloudFront cache
+          aws cloudfront create-invalidation \
+            --distribution-id ${{ secrets.CLOUDFRONT_DISTRIBUTION_ID_PRODUCTION }} \
+            --paths "/*"
+
+      - name: Run smoke tests
+        run: |
+          pnpm test:smoke --env=production
+        env:
+          PRODUCTION_URL: https://housing-trends.com
+
+      - name: Notify deployment
+        if: always()
+        uses: 8398a7/action-slack@v3
+        with:
+          status: ${{ job.status }}
+          text: 'Production deployment ${{ job.status }}'
+          webhook_url: ${{ secrets.SLACK_WEBHOOK }}
+
+  # Performance testing
+  performance-test:
+    name: Performance Testing
+    runs-on: ubuntu-latest
+    needs: deploy-staging
+    if: github.ref == 'refs/heads/staging'
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run Lighthouse CI
+        uses: treosh/lighthouse-ci-action@v10
+        with:
+          urls: |
+            https://staging.housing-trends.com
+            https://staging.housing-trends.com/search
+            https://staging.housing-trends.com/dashboard
+          uploadArtifacts: true
+          temporaryPublicStorage: true
+
+      - name: Run K6 load tests
+        uses: grafana/k6-action@v0.3.0
+        with:
+          filename: tests/load/k6-test.js
+          flags: --out cloud
+
+  # Rollback mechanism
+  rollback:
+    name: Rollback Deployment
+    runs-on: ubuntu-latest
+    if: failure() && (needs.deploy-production.result == 'failure' || needs.deploy-staging.result == 'failure')
+    needs: [deploy-production, deploy-staging]
+    
+    steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Rollback ECS service
+        run: |
+          ENVIRONMENT="${{ github.ref == 'refs/heads/main' && 'production' || 'staging' }}"
+          
+          # Get previous task definition
+          PREVIOUS_TASK_DEF=$(aws ecs describe-services \
+            --cluster ${{ env.ECS_CLUSTER }}-${ENVIRONMENT} \
+            --services housing-api-${ENVIRONMENT} \
+            --query 'services[0].deployments[1].taskDefinition' \
+            --output text)
+          
+          # Roll back to previous version
+          aws ecs update-service \
+            --cluster ${{ env.ECS_CLUSTER }}-${ENVIRONMENT} \
+            --service housing-api-${ENVIRONMENT} \
+            --task-definition ${PREVIOUS_TASK_DEF}
+
+      - name: Notify rollback
+        uses: 8398a7/action-slack@v3
+        with:
+          status: 'warning'
+          text: 'Deployment rolled back due to failure'
+          webhook_url: ${{ secrets.SLACK_WEBHOOK }}

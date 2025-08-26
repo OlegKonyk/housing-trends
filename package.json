@@ -1,0 +1,53 @@
+{
+  "name": "housing-trends",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Housing & Rent Trends Dashboard - A modern web application with comprehensive E2E testing",
+  "author": "Your Name",
+  "license": "MIT",
+  "engines": {
+    "node": ">=20.0.0",
+    "pnpm": ">=8.0.0"
+  },
+  "packageManager": "pnpm@8.15.0",
+  "scripts": {
+    "dev": "turbo dev",
+    "build": "turbo build",
+    "build:web": "turbo build --filter=web",
+    "build:api": "turbo build --filter=api",
+    "test": "turbo test",
+    "test:e2e": "turbo test:e2e",
+    "test:e2e:ui": "turbo test:e2e:ui",
+    "test:all": "turbo test test:e2e",
+    "test:smoke": "pnpm --filter e2e test:smoke",
+    "lint": "turbo lint",
+    "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md}\"",
+    "db:migrate": "pnpm --filter database migrate",
+    "db:studio": "pnpm --filter database studio",
+    "prepare": "husky install",
+    "deploy:dev": "./scripts/aws-deploy.sh development",
+    "deploy:staging": "./scripts/aws-deploy.sh staging",
+    "deploy:prod": "./scripts/aws-deploy.sh production",
+    "cdk:synth": "cd infrastructure/cdk && cdk synth",
+    "cdk:diff": "cd infrastructure/cdk && cdk diff",
+    "cdk:deploy": "cd infrastructure/cdk && cdk deploy"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "eslint": "^8.56.0",
+    "husky": "^9.0.0",
+    "lint-staged": "^15.2.0",
+    "prettier": "^3.2.0",
+    "turbo": "^1.11.0",
+    "typescript": "^5.3.0"
+  },
+  "lint-staged": {
+    "*.{ts,tsx,js,jsx}": [
+      "eslint --fix",
+      "prettier --write"
+    ],
+    "*.{json,md,yml}": [
+      "prettier --write"
+    ]
+  }
+}
