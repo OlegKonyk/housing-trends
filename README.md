@@ -198,11 +198,10 @@ pnpm deploy:prod           # Deploy to production
 
 ## 📚 Documentation
 
-- [Architecture Overview](./docs/ARCHITECTURE.md)
-- [AWS Infrastructure](./docs/AWS_ARCHITECTURE.md)
-- [Testing Strategy](./docs/TESTING_STRATEGY.md)
-- [Project Roadmap](./docs/ROADMAP.md)
-- [Blog Posts](./docs/blog/)
+- [📖 Architecture Documentation](./docs/architecture/) - Comprehensive system design and implementation guides
+- [🗺️ Project Roadmap](./docs/ROADMAP.md) - Development phases and feature planning
+- [🌿 Branch Strategy](./docs/BRANCH_SUMMARY.md) - Git workflow and branch management
+- [📝 Blog Posts](./docs/blog/) - Technical articles and development insights
 
 ## 🤝 Contributing
 
