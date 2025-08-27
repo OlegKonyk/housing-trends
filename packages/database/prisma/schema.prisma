@@ -1,0 +1,342 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// User Management
+model User {
+  id                String            @id @default(cuid())
+  email             String            @unique
+  password          String?
+  name              String?
+  avatar            String?
+  role              UserRole          @default(USER)
+  emailVerified     Boolean           @default(false)
+  emailVerificationToken String?
+  resetPasswordToken     String?
+  resetPasswordExpires   DateTime?
+  
+  // OAuth
+  googleId          String?           @unique
+  githubId          String?           @unique
+  
+  // Timestamps
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+  lastLoginAt       DateTime?
+  
+  // Relations
+  savedSearches     SavedSearch[]
+  notifications     Notification[]
+  searchHistory     SearchHistory[]
+  refreshTokens     RefreshToken[]
+  
+  @@index([email])
+  @@index([role])
+}
+
+model RefreshToken {
+  id          String   @id @default(cuid())
+  token       String   @unique
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt   DateTime
+  createdAt   DateTime @default(now())
+  
+  @@index([userId])
+  @@index([token])
+}
+
+enum UserRole {
+  USER
+  PREMIUM
+  ADMIN
+}
+
+// Housing Data
+model County {
+  id              String          @id @default(cuid())
+  fipsCode        String          @unique
+  name            String
+  state           String
+  stateCode       String
+  population      Int?
+  medianIncome    Float?
+  
+  // Geographic data
+  latitude        Float?
+  longitude       Float?
+  bounds          Json?           // GeoJSON bounds
+  
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  
+  // Relations
+  housingData     HousingData[]
+  rentData        RentData[]
+  marketTrends    MarketTrend[]
+  
+  @@index([stateCode])
+  @@index([name])
+  @@index([fipsCode])
+}
+
+model HousingData {
+  id              String          @id @default(cuid())
+  countyId        String
+  county          County          @relation(fields: [countyId], references: [id], onDelete: Cascade)
+  
+  // Price data
+  medianHomePrice Float
+  averageHomePrice Float?
+  pricePerSqft    Float?
+  
+  // Market metrics
+  inventoryCount  Int?
+  daysOnMarket    Int?
+  salesVolume     Int?
+  
+  // Year over year changes
+  priceChangeYoY  Float?
+  inventoryChangeYoY Float?
+  
+  // Time period
+  year            Int
+  month           Int
+  quarter         Int?
+  
+  // Data source
+  source          DataSource
+  sourceUrl       String?
+  
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  
+  @@unique([countyId, year, month, source])
+  @@index([countyId])
+  @@index([year, month])
+}
+
+model RentData {
+  id              String          @id @default(cuid())
+  countyId        String
+  county          County          @relation(fields: [countyId], references: [id], onDelete: Cascade)
+  
+  // Rent prices by bedroom count
+  studioRent      Float?
+  oneBedRent      Float?
+  twoBedRent      Float?
+  threeBedRent    Float?
+  fourBedRent     Float?
+  
+  // Overall metrics
+  medianRent      Float
+  averageRent     Float?
+  
+  // Vacancy and availability
+  vacancyRate     Float?
+  availableUnits  Int?
+  
+  // Year over year changes
+  rentChangeYoY   Float?
+  vacancyChangeYoY Float?
+  
+  // Time period
+  year            Int
+  month           Int
+  quarter         Int?
+  
+  // Data source
+  source          DataSource
+  sourceUrl       String?
+  
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  
+  @@unique([countyId, year, month, source])
+  @@index([countyId])
+  @@index([year, month])
+}
+
+model MarketTrend {
+  id              String          @id @default(cuid())
+  countyId        String
+  county          County          @relation(fields: [countyId], references: [id], onDelete: Cascade)
+  
+  // Affordability metrics
+  rentToIncomeRatio Float?
+  priceToIncomeRatio Float?
+  affordabilityIndex Float?
+  
+  // Supply and demand
+  supplyDemandIndex Float?
+  constructionPermits Int?
+  newListings     Int?
+  
+  // Economic indicators
+  unemploymentRate Float?
+  populationGrowth Float?
+  jobGrowth       Float?
+  
+  // Predictions (if available)
+  predictedPriceChange Float?
+  predictedRentChange Float?
+  confidenceScore Float?
+  
+  // Time period
+  year            Int
+  month           Int
+  
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  
+  @@unique([countyId, year, month])
+  @@index([countyId])
+  @@index([year, month])
+}
+
+enum DataSource {
+  HUD
+  CENSUS
+  FRED
+  MANUAL
+  CALCULATED
+}
+
+// User Features
+model SavedSearch {
+  id              String          @id @default(cuid())
+  userId          String
+  user            User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  name            String
+  description     String?
+  
+  // Search criteria (stored as JSON)
+  filters         Json
+  
+  // Notification preferences
+  emailNotifications Boolean      @default(false)
+  notificationFrequency NotificationFrequency @default(WEEKLY)
+  lastNotifiedAt  DateTime?
+  
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  
+  @@index([userId])
+}
+
+model SearchHistory {
+  id              String          @id @default(cuid())
+  userId          String?
+  user            User?           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  // Search details
+  query           String?
+  filters         Json
+  resultsCount    Int
+  
+  // Analytics
+  ipAddress       String?
+  userAgent       String?
+  sessionId       String?
+  
+  createdAt       DateTime        @default(now())
+  
+  @@index([userId])
+  @@index([sessionId])
+  @@index([createdAt])
+}
+
+model Notification {
+  id              String          @id @default(cuid())
+  userId          String
+  user            User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  type            NotificationType
+  subject         String
+  content         String
+  metadata        Json?
+  
+  read            Boolean         @default(false)
+  readAt          DateTime?
+  
+  sent            Boolean         @default(false)
+  sentAt          DateTime?
+  
+  createdAt       DateTime        @default(now())
+  
+  @@index([userId])
+  @@index([type])
+  @@index([read])
+}
+
+enum NotificationType {
+  PRICE_ALERT
+  NEW_LISTINGS
+  MARKET_UPDATE
+  SYSTEM
+  WELCOME
+}
+
+enum NotificationFrequency {
+  DAILY
+  WEEKLY
+  MONTHLY
+}
+
+// System
+model ApiLog {
+  id              String          @id @default(cuid())
+  
+  endpoint        String
+  method          String
+  statusCode      Int
+  responseTime    Int             // in milliseconds
+  
+  userId          String?
+  ipAddress       String?
+  userAgent       String?
+  
+  error           String?
+  errorStack      String?
+  
+  createdAt       DateTime        @default(now())
+  
+  @@index([endpoint])
+  @@index([statusCode])
+  @@index([createdAt])
+}
+
+model DataSyncLog {
+  id              String          @id @default(cuid())
+  
+  source          DataSource
+  status          SyncStatus
+  recordsProcessed Int            @default(0)
+  recordsFailed   Int             @default(0)
+  
+  startedAt       DateTime
+  completedAt     DateTime?
+  
+  error           String?
+  metadata        Json?
+  
+  @@index([source])
+  @@index([status])
+  @@index([startedAt])
+}
+
+enum SyncStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  FAILED
+}
