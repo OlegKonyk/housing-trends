@@ -1,220 +1,229 @@
-<<<<<<< Current (Your changes)
-# housing-trends
-=======
 # 🏠 Housing & Rent Trends Dashboard
 
-> A modern, data-driven web application for tracking housing and rental market trends across the United States, built with a focus on comprehensive end-to-end testing and automation.
+A modern, full-stack web application for tracking housing and rental market trends across US counties using government data sources.
 
-## 🎯 Project Goals
+## 🚀 Current Status
 
-1. **Technical Excellence**: Showcase modern web development with TypeScript and cutting-edge tools
-2. **Testing Mastery**: Implement comprehensive E2E test automation patterns
-3. **Real-World Value**: Provide genuine insights into housing market trends
-4. **Knowledge Sharing**: Document learnings through blog posts and open-source contributions
+**✅ COMPLETED FEATURES:**
+- ✅ **Infrastructure**: AWS CDK setup with complete cloud architecture
+- ✅ **Backend API**: NestJS with comprehensive data models and services
+- ✅ **Frontend**: Next.js with interactive data visualizations
+- ✅ **Authentication**: JWT-based auth with registration, login, password reset
+- ✅ **Saved Searches**: Advanced search with filtering and saved criteria
+- ✅ **Notifications**: Multi-channel notification system with email alerts
+- ✅ **CI/CD**: GitHub Actions with AWS deployment pipeline
+- ✅ **Documentation**: Architecture, testing strategy, and roadmap
 
-## 🚀 Features
+**🔄 IN PROGRESS:**
+- 🔄 **E2E Testing**: Playwright framework setup (Next)
 
-### Core Functionality
-- 📊 **Interactive Data Visualization**: Charts and graphs showing housing trends
-- 🗺️ **Geographic Analysis**: Interactive maps with county-level data
-- 🔍 **Advanced Search**: Filter by location, price range, property type
-- 👤 **User Accounts**: Save searches and preferences
-- 📧 **Email Notifications**: Scheduled updates for saved regions
-- 📱 **Responsive Design**: Mobile-first approach
-- 🌙 **Dark Mode**: Toggle between light and dark themes
-
-### Data Insights
-- Median rent and home prices by county
-- Income vs. rent ratio analysis
-- Historical trend comparisons
-- Market heat maps
-- Affordability calculators
-
-## 🛠️ Tech Stack
+## 🛠 Tech Stack
 
 ### Frontend
 - **Framework**: Next.js 15 (App Router)
-- **Language**: TypeScript 5.x
-- **Styling**: Tailwind CSS + Shadcn/ui
-- **State Management**: Zustand + TanStack Query
-- **Data Viz**: Recharts + Mapbox GL JS
-- **Forms**: React Hook Form + Zod
+- **UI**: Shadcn/ui + Radix UI + Tailwind CSS
+- **Charts**: Recharts for data visualization
+- **Maps**: Mapbox GL JS for interactive maps
+- **State**: Zustand + TanStack Query
+- **Forms**: React Hook Form + Zod validation
+- **Theming**: Next-themes for dark/light mode
 
 ### Backend
-- **API**: NestJS or Fastify
-- **Database**: PostgreSQL + Prisma ORM
-- **Caching**: Redis
-- **Queue**: BullMQ
-- **Auth**: Supabase Auth
-- **Email**: Resend
+- **Framework**: NestJS with TypeScript
+- **Database**: PostgreSQL with Prisma ORM
+- **Cache**: Redis with BullMQ for job queues
+- **Auth**: JWT + Passport + Bcrypt
+- **API**: OpenAPI/Swagger documentation
+- **Validation**: Class-validator + Joi
 
-### Testing
-- **E2E**: Playwright
+### DevOps & Cloud (AWS)
+- **Infrastructure**: AWS CDK (TypeScript)
+- **Compute**: ECS Fargate for containerized apps
+- **Database**: RDS PostgreSQL with read replicas
+- **Cache**: ElastiCache Redis
+- **Storage**: S3 + CloudFront for static assets
+- **Email**: SES for notifications
+- **Monitoring**: CloudWatch + X-Ray
+- **Security**: WAF + Secrets Manager
+
+### Testing Stack
+- **E2E**: Playwright (planned)
 - **API**: Supertest + Jest
-- **Unit/Integration**: Vitest
-- **Visual Regression**: Percy
+- **Component**: Testing Library + Vitest
+- **Visual**: Percy/Chromatic
 - **Performance**: Lighthouse CI
 - **Accessibility**: axe-core
 
-### DevOps & Cloud (AWS)
-- **CI/CD**: GitHub Actions + AWS CodePipeline
-- **Containerization**: Docker + ECS Fargate
-- **Infrastructure**: AWS CDK (Infrastructure as Code)
-- **Monitoring**: CloudWatch + Sentry
-- **Analytics**: PostHog
-
 ## 📊 Data Sources
 
-- **HUD (Housing and Urban Development)**: Fair Market Rents, Income Limits
-- **Census Bureau**: American Community Survey, Housing Statistics
-- **FRED (Federal Reserve)**: Economic indicators
-- **BLS (Bureau of Labor Statistics)**: Consumer Price Index for housing
+- **HUD User**: Federal housing data
+- **Census Bureau**: Demographic and housing statistics
+- **FRED**: Economic indicators
+- **Bureau of Labor Statistics**: Employment data
 
-## 🧪 Testing Strategy
-
-This project serves as a comprehensive testing playground:
-
-### E2E Test Scenarios
-1. **Authentication Flows**: Registration, login, password reset, OAuth
-2. **Data Interactions**: Search, filter, sort, paginate
-3. **Map Interactions**: Zoom, pan, region selection
-4. **Chart Interactions**: Hover tooltips, data point selection
-5. **User Workflows**: Save searches, manage notifications
-6. **API Testing**: Rate limiting, error handling, data validation
-7. **Performance Testing**: Load times, bundle sizes, Core Web Vitals
-8. **Accessibility Testing**: WCAG compliance, keyboard navigation
-
-## 📁 Project Structure
+## 🏗 Project Structure
 
 ```
 housing-trends/
 ├── apps/
-│   ├── web/                 # Next.js frontend
 │   ├── api/                 # NestJS backend
-│   └── e2e/                 # Playwright tests
+│   └── web/                 # Next.js frontend
 ├── packages/
-│   ├── ui/                  # Shared UI components
-│   ├── database/            # Prisma schema & migrations
+│   ├── database/            # Prisma schema & client
 │   ├── types/               # Shared TypeScript types
 │   └── utils/               # Shared utilities
-├── docker/                  # Docker configurations
-├── .github/
-│   └── workflows/           # CI/CD pipelines
-├── docs/
-│   ├── architecture/        # System design docs
-│   ├── testing/             # Testing strategies
-│   └── blog/                # Blog post drafts
+├── infrastructure/
+│   └── cdk/                 # AWS CDK infrastructure
+├── docs/                    # Documentation
 └── scripts/                 # Build & deployment scripts
 ```
 
-## 🚦 Getting Started
+## 🚀 Getting Started
 
 ### Prerequisites
-- Node.js 20+
-- pnpm 8+
+- Node.js 18+
+- pnpm
 - Docker & Docker Compose
-- AWS CLI configured
-- AWS Account with appropriate permissions
-- PostgreSQL 15+ (local development)
-- Redis 7+ (local development)
+- AWS CLI (for deployment)
 
 ### Installation
 
-```bash
-# Clone the repository
-git clone https://github.com/yourusername/housing-trends.git
-cd housing-trends
+1. **Clone the repository**
+   ```bash
+   git clone https://github.com/OlegKonyk/housing-trends.git
+   cd housing-trends
+   ```
 
-# Install dependencies
-pnpm install
+2. **Install dependencies**
+   ```bash
+   pnpm install
+   ```
 
-# Set up environment variables
-cp .env.example .env.local
+3. **Set up environment variables**
+   ```bash
+   cp .env.example .env
+   # Edit .env with your configuration
+   ```
 
-# Configure AWS CLI
-aws configure
+4. **Start local development**
+   ```bash
+   # Start database and Redis
+   docker-compose up -d
+   
+   # Run database migrations
+   pnpm db:migrate
+   
+   # Start development servers
+   pnpm dev
+   ```
 
-# Start local development services
-docker-compose up -d
-
-# Run database migrations
-pnpm db:migrate
-
-# Start development servers
-pnpm dev
-```
-
-### AWS Deployment
-
-```bash
-# Deploy to development environment
-./scripts/aws-deploy.sh development
-
-# Deploy to staging
-./scripts/aws-deploy.sh staging
-
-# Deploy to production (requires confirmation)
-./scripts/aws-deploy.sh production
-
-# Or use CDK directly
-cd infrastructure/cdk
-cdk deploy --context environment=staging
-```
-
-### Running Tests
+### Development Commands
 
 ```bash
-# Unit tests
-pnpm test
+# Development
+pnpm dev                    # Start all services
+pnpm build                  # Build all packages
+pnpm test                   # Run tests
+pnpm lint                   # Lint code
+pnpm format                 # Format code
 
-# E2E tests
-pnpm test:e2e
+# Database
+pnpm db:migrate            # Run migrations
+pnpm db:studio             # Open Prisma Studio
 
-# E2E tests with UI
-pnpm test:e2e:ui
-
-# All tests with coverage
-pnpm test:all
+# AWS Deployment
+pnpm deploy:dev            # Deploy to development
+pnpm deploy:staging        # Deploy to staging
+pnpm deploy:prod           # Deploy to production
 ```
 
-## 📝 Blog Topics
+## 🔐 Authentication Features
 
-Planned blog posts to share our learnings:
+- **User Registration** with email verification
+- **JWT-based Authentication** with refresh tokens
+- **Password Reset** via email
+- **Protected Routes** with role-based access
+- **Rate Limiting** on sensitive endpoints
 
-1. **"Building a Robust E2E Testing Strategy with Playwright"**
-2. **"Testing Interactive Maps and Charts: Challenges and Solutions"**
-3. **"Implementing Visual Regression Testing in CI/CD"**
-4. **"Performance Testing Strategies for Data-Heavy Applications"**
-5. **"Authentication Testing: Covering All Edge Cases"**
-6. **"API Testing Best Practices with Real Government Data"**
-7. **"Accessibility Testing: Beyond Compliance"**
-8. **"Test Data Management Strategies for Complex Applications"**
+## 🔍 Search & Analytics
 
-## 🎓 Learning Objectives
+- **Advanced Filtering**: State, county, price ranges, trends
+- **Saved Searches**: Custom criteria with notifications
+- **Search History**: Track user search patterns
+- **Popular Searches**: Analytics on common queries
+- **Similar Counties**: AI-powered recommendations
 
-- Master modern E2E testing frameworks
-- Implement comprehensive CI/CD pipelines
-- Handle complex async operations in tests
-- Test data visualization components
-- Implement visual regression testing
-- Create maintainable test architectures
-- Document and share testing knowledge
+## 📧 Notification System
+
+- **In-App Notifications**: Real-time updates
+- **Email Alerts**: Scheduled market updates
+- **Price Alerts**: Custom threshold notifications
+- **Multiple Frequencies**: Daily, weekly, monthly
+- **Queue Processing**: Background job handling
+
+## 🧪 Testing Strategy
+
+### E2E Testing (Next Phase)
+- **Authentication Flows**: Login, registration, password reset
+- **Search Functionality**: Complex queries and filtering
+- **Saved Searches**: CRUD operations and notifications
+- **Data Visualization**: Charts and map interactions
+- **Responsive Design**: Mobile and desktop testing
+
+### API Testing
+- **Endpoint Validation**: Request/response testing
+- **Authentication**: JWT token validation
+- **Rate Limiting**: Security testing
+- **Error Handling**: Edge case coverage
+
+### Component Testing
+- **UI Components**: Individual component testing
+- **Form Validation**: Input validation testing
+- **State Management**: Context and store testing
+
+## 📈 Performance & Monitoring
+
+- **Lighthouse CI**: Performance monitoring
+- **CloudWatch**: Application metrics
+- **X-Ray**: Distributed tracing
+- **Error Tracking**: Comprehensive logging
+
+## 🔒 Security Features
+
+- **JWT Token Rotation**: Secure authentication
+- **Password Hashing**: Bcrypt with salt
+- **Rate Limiting**: DDoS protection
+- **CORS Configuration**: Cross-origin security
+- **Input Validation**: XSS and injection protection
+
+## 📚 Documentation
+
+- [Architecture Overview](./docs/ARCHITECTURE.md)
+- [AWS Infrastructure](./docs/AWS_ARCHITECTURE.md)
+- [Testing Strategy](./docs/TESTING_STRATEGY.md)
+- [Project Roadmap](./docs/ROADMAP.md)
+- [Blog Posts](./docs/blog/)
 
 ## 🤝 Contributing
 
-This project is open source and welcomes contributions! Check out our [Contributing Guide](docs/CONTRIBUTING.md) for details.
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
 
 ## 📄 License
 
-MIT License - see [LICENSE](LICENSE) file for details.
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-## 🙏 Acknowledgments
+## 🎯 Next Steps
 
-- Government data providers (HUD, Census Bureau, FRED, BLS)
-- Open source community
-- Testing framework maintainers
+1. **E2E Testing Setup**: Implement Playwright testing framework
+2. **Data Integration**: Connect to government APIs
+3. **Performance Optimization**: Implement caching and CDN
+4. **Mobile App**: React Native companion app
+5. **Advanced Analytics**: Machine learning insights
 
 ---
 
-**Built with ❤️ for the testing community**
->>>>>>> Incoming (Background Agent changes)
+**Built with ❤️ for the housing market community**
